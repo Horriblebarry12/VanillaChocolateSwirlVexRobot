@@ -4,7 +4,7 @@
 
 float PID::control(float value, float targetValue, float timeStep)
 {
-    float deltaValue = targetValue - value;
+    float deltaValue = -(targetValue - value);
     float deltaTime = timeStep - lastTimestep;
     sum += value * deltaTime;
     float output = 0;
@@ -21,3 +21,10 @@ float PID::control(float value, float targetValue, float timeStep, float min, fl
 {
     return std::max(std::min(control(value, targetValue, timeStep), max), min);
 } 
+
+void PID::reset()
+{
+    sum = 0;
+    lastTimestep = 0;
+    lastValue = 0;
+}

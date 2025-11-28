@@ -1,4 +1,6 @@
 #include "vex.h"
+#include <sstream>
+#include <string>
 #include <math.h>
 #include "Drivetrain.h"
 using namespace vex;
@@ -7,11 +9,34 @@ competition Competition;
 controller Controller;
 brain Brain;
 
-motor FrontLeft = motor(4, vex::gearSetting::ratio6_1, true);
+int totalLine = 0;
+int logLine = 0;
+void Log(std::string msg)
+{
+  std::stringstream stream;
+  stream << "[" << totalLine << "][" << Brain.timer(timeUnits::sec) << "] " << msg;
+  Brain.Screen.clearLine();
+  Brain.Screen.print(stream.str().c_str());
+  Brain.Screen.newLine();
+  Brain.Screen.clearLine();
+  logLine++;
+  totalLine++;
+  //if (logLine > 10)
+  {
+    Brain.Screen.setCursor(1, 0);
+    logLine = 0;
+  }
+  //else
+  {
+  //  Brain.Screen.print("-----------------------------------------------");
+  }
+}
+
+motor FrontLeft = motor(4, vex::gearSetting::ratio6_1, false);
 motor MiddleLeft = motor(6, vex::gearSetting::ratio6_1, false);
 motor RearLeft = motor(8, vex::gearSetting::ratio6_1, false);
 
-motor FrontRight = motor(5, vex::gearSetting::ratio6_1, true);
+motor FrontRight = motor(5, vex::gearSetting::ratio6_1, false);
 motor MiddleRight = motor(7, vex::gearSetting::ratio6_1, false);
 motor RearRight = motor(9, vex::gearSetting::ratio6_1, false);
 
@@ -34,19 +59,20 @@ digital_out Unloader = digital_out(Brain.ThreeWirePort.A);
 
 inertial InertialSensor = inertial(10, turnType::left);
 
-Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 0.2f, 0.0f, 0.1f);
+Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 0.5f, -0.3f, 1.0f, Log);
 
 #pragma region DriveDef
+
 
 
 #pragma endregion
 
 void pre_auton() {
-  Unloader.set(true);
-  LowerIntake.setVelocity(100, percentUnits::pct);
-  LowerAgitator.setVelocity(100, percentUnits::pct);
-  UpperAgitator.setVelocity(100, percentUnits::pct);
-  UpperOuttake.setVelocity(100, percentUnits::pct);
+  InertialSensor.calibrate(2);
+  while (InertialSensor.isCalibrating())
+  {
+    wait(100, timeUnits::msec);
+  }
 }
 
 #pragma region Auton
@@ -95,7 +121,14 @@ void turn(float dist)
 }
 
 void autonomous(void) {
-	RobotDrivetrain.MoveCommandInch(5.0f);
+  //for (int i = 0; i < 26; i++)
+  {
+    Log("test");
+    wait(500, timeUnits::msec);
+  }
+  
+
+  RobotDrivetrain.TurnCommandDegPID(180);
 }
 
 
@@ -105,7 +138,7 @@ bool UpperJam = false;
 bool LowerJam = false;
 bool UpperSpin = false;
 bool LowerSpin = false;
-void usercontrol(void) {
+void drivercontrol(void) {
   // User control code here, inside the loop 
   while (1) {
 
@@ -202,11 +235,11 @@ void usercontrol(void) {
 int main() {
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
-  Competition.drivercontrol(usercontrol);
+  Competition.drivercontrol(drivercontrol);
 
   // Run the pre-autonomous function.
   pre_auton();
-
+  autonomous();
   // Prevent main from exiting with an infinite loop.
   while (true) {
     wait(100, msec);

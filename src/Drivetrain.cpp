@@ -1,8 +1,8 @@
 #include "Drivetrain.h"
-#include "vex.h"
 
-const float wheelCircumferenceInch = 4 * 3.14159; // Assuming 4 inch diameter wheels
-const float wheelBaseInch = 12.0f; // Distance between left and right wheels
+const float wheelCircumferenceInch = 3.25 * 3.14159; 
+const float gearRatio = 60.0f/36.0f; 
+const float wheelBaseInch = 12.0f;
 
 
 void Drivetrain::SetMaxSpeed(float speedPct)
@@ -31,11 +31,11 @@ void Drivetrain::SetMaxTorque(float torquePct)
 
 void Drivetrain::MoveCommandInch(float distanceInch)
 {
-    float rotations = distanceInch / wheelCircumferenceInch;
+    float rotations = (distanceInch / wheelCircumferenceInch) * gearRatio;
 
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {
-        LeftMotors->spinFor(rotations, rotationUnits::rev, false);
+        LeftMotors->spinFor(-rotations, rotationUnits::rev, false);
         RightMotors->spinFor(rotations, rotationUnits::rev, true);
     }
 }
@@ -52,27 +52,42 @@ void Drivetrain::MoveCommandMM(float distanceMM)
 
 void Drivetrain::TurnCommandDegPID(float angleDeg)
 {
-    float turnCircumferenceInch = wheelBaseInch * 3.14159f;
-    float distanceInch = (angleDeg / 360.0f) * turnCircumferenceInch;
-    float rotations = distanceInch / wheelCircumferenceInch;
-
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {
+        float timer = 0;
+        bool isTiming = false;
+
+        pidController.reset();
+        InertialSensor->setHeading(0, rotationUnits::deg);
         float targetAngle = InertialSensor->heading() + angleDeg;
 
         float currentAngle = InertialSensor->heading();
         float lastTimestamp = InertialSensor->timestamp() / 1000.0f;
         float deltaTime = 0;
-        while (fabs(currentAngle - targetAngle) > 1.0f)
+        
+        while (fabs(currentAngle - targetAngle) > 0.2f && timer < 3)
         {
             deltaTime = (InertialSensor->timestamp() - lastTimestamp) / 1000.0f; 
             if (deltaTime == 0)
                 continue;
+            if (isTiming)
+                timer += deltaTime;
             currentAngle = InertialSensor->heading();
             TurnCommandSpeed(pidController.control(currentAngle, targetAngle, deltaTime, -100.0f, 100.0f));
 
-            lastTimestamp = InertialSensor->timestamp() / 1000.0f;
+            if (fabs(currentAngle - targetAngle) < 0.2f)
+            {
+                if (!isTiming)
+                    isTiming = true;
+            }
+            else
+            {
+                isTiming = false;
+                timer = 0;
+            }
 
+            lastTimestamp = InertialSensor->timestamp() / 1000.0f;
+            //wait(50, timeUnits::msec);
         }
 
         LeftMotors->stop();
@@ -89,7 +104,7 @@ void Drivetrain::TurnCommandDeg(float angleDeg)
 {
     float turnCircumferenceInch = wheelBaseInch * 3.14159f;
     float distanceInch = (angleDeg / 360.0f) * turnCircumferenceInch;
-    float rotations = distanceInch / wheelCircumferenceInch;
+    float rotations = (distanceInch / wheelCircumferenceInch) * gearRatio;
 
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {
@@ -108,7 +123,7 @@ void Drivetrain::TurnCommandSpeed(float speed)
 {
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {
-        LeftMotors->spin(directionType::fwd, speed, velocityUnits::pct);
-        RightMotors->spin(directionType::rev, speed, velocityUnits::pct);
+        LeftMotors->spin(directionType::fwd, -speed, velocityUnits::pct);
+        RightMotors->spin(directionType::fwd, -speed, velocityUnits::pct);
     }
 }

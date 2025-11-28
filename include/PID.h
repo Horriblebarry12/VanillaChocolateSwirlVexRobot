@@ -27,6 +27,8 @@ public:
     
     float control(float value, float targetValue, float timeStep);
     float control(float value, float targetValue, float timeStep, float min, float max);
+
+    void reset();
 private:
 
 };

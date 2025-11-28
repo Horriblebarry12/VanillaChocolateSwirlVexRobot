@@ -1,11 +1,10 @@
-namespace vex
-{
-    class motor_group;
-    class inertial;
-}
-using namespace vex;
-
+#include "vex.h"
+#include <sstream>
+#include <functional>
+#include <string>
 #include "PID.h"
+
+using namespace vex;
 
 class Drivetrain
 {
@@ -20,20 +19,25 @@ public:
 
     PID pidController;
 
+    std::function<void(const std::string&)> Logger;
+
     Drivetrain() : X(0), Y(0), Heading(0)
     {
         LeftMotors = nullptr;
         RightMotors = nullptr;
 
         pidController = PID(0.1f, 0.01f, 0.05f);
+
+        
     }
 
-    Drivetrain(motor_group* leftMotors, motor_group* rightMotors, inertial* inertialSensor, float kp, float ki, float kd) : X(0), Y(0), Heading(0)
+    Drivetrain(motor_group* leftMotors, motor_group* rightMotors, inertial* inertialSensor, float kp, float ki, float kd, std::function<void(const std::string&)> logger) : X(0), Y(0), Heading(0)
     {
         LeftMotors = leftMotors;
         RightMotors = rightMotors;
         InertialSensor = inertialSensor;
         pidController = PID(kp, ki, kd);
+        Logger = logger;
     }
 
     // Out of 100
