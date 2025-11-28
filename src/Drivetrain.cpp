@@ -1,9 +1,8 @@
 #include "Drivetrain.h"
 
-const float wheelCircumferenceInch = 3.25 * 3.14159; 
-const float gearRatio = 60.0f/36.0f; 
+const float wheelCircumferenceInch = 3.25 * 3.14159;
+const float gearRatio = 60.0f / 36.0f;
 const float wheelBaseInch = 12.0f;
-
 
 void Drivetrain::SetMaxSpeed(float speedPct)
 {
@@ -64,10 +63,10 @@ void Drivetrain::TurnCommandDegPID(float angleDeg)
         float currentAngle = InertialSensor->heading();
         float lastTimestamp = InertialSensor->timestamp() / 1000.0f;
         float deltaTime = 0;
-        
+
         while (fabs(currentAngle - targetAngle) > 0.2f && timer < 3)
         {
-            deltaTime = (InertialSensor->timestamp() - lastTimestamp) / 1000.0f; 
+            deltaTime = (InertialSensor->timestamp() - lastTimestamp) / 1000.0f;
             if (deltaTime == 0)
                 continue;
             if (isTiming)
@@ -87,7 +86,7 @@ void Drivetrain::TurnCommandDegPID(float angleDeg)
             }
 
             lastTimestamp = InertialSensor->timestamp() / 1000.0f;
-            //wait(50, timeUnits::msec);
+            // wait(50, timeUnits::msec);
         }
 
         LeftMotors->stop();
@@ -111,7 +110,6 @@ void Drivetrain::TurnCommandDeg(float angleDeg)
         LeftMotors->spinFor(rotations, rotationUnits::rev, false);
         RightMotors->spinFor(-rotations, rotationUnits::rev, true);
     }
-    
 }
 
 void Drivetrain::TurnCommandRad(float angleRad)

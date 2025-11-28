@@ -12,14 +12,14 @@ public:
     float X;
     float Y;
     float Heading; // in degrees
-    motor_group* LeftMotors;
-    motor_group* RightMotors;
+    motor_group *LeftMotors;
+    motor_group *RightMotors;
 
-    inertial* InertialSensor;
+    inertial *InertialSensor;
 
     PID pidController;
 
-    std::function<void(const std::string&)> Logger;
+    std::function<void(const std::string &)> Logger;
 
     Drivetrain() : X(0), Y(0), Heading(0)
     {
@@ -27,11 +27,9 @@ public:
         RightMotors = nullptr;
 
         pidController = PID(0.1f, 0.01f, 0.05f);
-
-        
     }
 
-    Drivetrain(motor_group* leftMotors, motor_group* rightMotors, inertial* inertialSensor, float kp, float ki, float kd, std::function<void(const std::string&)> logger) : X(0), Y(0), Heading(0)
+    Drivetrain(motor_group *leftMotors, motor_group *rightMotors, inertial *inertialSensor, float kp, float ki, float kd, std::function<void(const std::string &)> logger) : X(0), Y(0), Heading(0)
     {
         LeftMotors = leftMotors;
         RightMotors = rightMotors;
@@ -44,7 +42,7 @@ public:
     void SetMaxSpeed(float speedPct);
     void SetMaxTorque(float torquePct);
 
-    // Negative values allowed 
+    // Negative values allowed
     void MoveCommandInch(float distanceInch);
     void MoveCommandTile(float distanceTile);
     void MoveCommandMM(float distanceMM);
@@ -56,10 +54,7 @@ public:
     void TurnCommandDeg(float angleDeg);
     void TurnCommandRad(float angleRad);
 
-    
-
     void TurnCommandSpeed(float speed);
 
 private:
-
 };
