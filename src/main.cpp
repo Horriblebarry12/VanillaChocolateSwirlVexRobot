@@ -1,122 +1,197 @@
 #include "vex.h"
-
+#include <math.h>
+#include "Drivetrain.h"
 using namespace vex;
+
 competition Competition;
 controller Controller;
+brain Brain;
 
+motor FrontLeft = motor(4, vex::gearSetting::ratio6_1, true);
+motor MiddleLeft = motor(6, vex::gearSetting::ratio6_1, false);
+motor RearLeft = motor(8, vex::gearSetting::ratio6_1, false);
+
+motor FrontRight = motor(5, vex::gearSetting::ratio6_1, true);
+motor MiddleRight = motor(7, vex::gearSetting::ratio6_1, false);
+motor RearRight = motor(9, vex::gearSetting::ratio6_1, false);
 
 motor_group LeftMotorGroup = motor_group(
-  motor(0, vex::gearSetting::ratio6_1, true), 
-  motor(1, vex::gearSetting::ratio6_1, false), 
-  motor(2, vex::gearSetting::ratio6_1, false));
+	FrontLeft,
+	MiddleLeft, 
+	RearLeft);
 
 motor_group RightMotorGroup = motor_group(
-  motor(3, vex::gearSetting::ratio6_1, true),
-  motor(4, vex::gearSetting::ratio6_1, false), 
-  motor(5, vex::gearSetting::ratio6_1, false));
+	FrontRight,
+	MiddleRight, 
+	RearRight);
 
-motor LowerAgitator = motor(7, vex::gearSetting::ratio36_1);
-motor UpperAgitator = motor(8, vex::gearSetting::ratio36_1);
-motor LowerIntake = motor(9, vex::gearSetting::ratio36_1);
-motor UpperOuttake = motor(10, vex::gearSetting::ratio36_1);
+motor LowerAgitator = motor(1, vex::gearSetting::ratio36_1);
+motor UpperAgitator = motor(0, vex::gearSetting::ratio36_1);
+motor LowerIntake = motor(3, vex::gearSetting::ratio36_1);
+motor UpperOuttake = motor(2, vex::gearSetting::ratio36_1);
 
 digital_out Unloader = digital_out(Brain.ThreeWirePort.A);
 
+inertial InertialSensor = inertial(10, turnType::left);
+
+Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 0.2f, 0.0f, 0.1f);
+
 #pragma region DriveDef
-Drive chassis(
-ZERO_TRACKER_ODOM,
-//Left Motors:
-LeftMotorGroup,
-//Right Motors:
-RightMotorGroup,
-//The PORT NUMBER of your inertial sensor, in PORT format (i.e. "PORT1", not simply "1"):
-6,
-//Input your wheel diameter. (4" omnis are actually closer to 4.125"):
-3.25,
-//External ratio, must be in decimal, in the format of input teeth/output teeth.
-0.6,
-//Gyro scale, this is what your gyro reads when you spin the robot 360 degrees.
-//For most cases 360 will do fine here, but this scale factor can be very helpful when precision is necessary.
-360,
 
-/*---------------------------------------------------------------------------*/
-/*                                  PAUSE!                                   */
-/*                                                                           */
-/*  The rest of the drive constructor is for robots using POSITION TRACKING. */
-/*  If you are not using position tracking, leave the rest of the values as  */
-/*  they are.                                                                */
-/*---------------------------------------------------------------------------*/
 
-//If you are using ZERO_TRACKER_ODOM, you ONLY need to adjust the FORWARD TRACKER CENTER DISTANCE.
-//FOR HOLONOMIC DRIVES ONLY: Input your drive motors by position. This is only necessary for holonomic drives, otherwise this section can be left alone.
-//LF:      //RF:    
-PORT1,     -PORT2,
-//LB:      //RB: 
-PORT3,     -PORT4,
-//If you are using position tracking, this is the Forward Tracker port (the tracker which runs parallel to the direction of the chassis).
-//If this is a rotation sensor, enter it in "PORT1" format, inputting the port below.
-//If this is an encoder, enter the port as an integer. Triport A will be a "1", Triport B will be a "2", etc.
-3,
-//Input the Forward Tracker diameter (reverse it to make the direction switch):
-2.75,
-//Input Forward Tracker center distance (a positive distance corresponds to a tracker on the right side of the robot, negative is left.)
-//For a zero tracker tank drive with odom, put the positive distance from the center of the robot to the right side of the drive.
-//This distance is in inches:
--2,
-//Input the Sideways Tracker Port, following the same steps as the Forward Tracker Port:
-1,
-//Sideways tracker diameter (reverse to make the direction switch):
--2.75,
-//Sideways tracker center distance (positive distance is behind the center of the robot, negative is in front):
-5.5
-);
 #pragma endregion
 
 void pre_auton() {
-
+  Unloader.set(true);
+  LowerIntake.setVelocity(100, percentUnits::pct);
+  LowerAgitator.setVelocity(100, percentUnits::pct);
+  UpperAgitator.setVelocity(100, percentUnits::pct);
+  UpperOuttake.setVelocity(100, percentUnits::pct);
 }
 
+#pragma region Auton
+
+void Load()
+{
+  LowerIntake.spin(directionType::fwd);
+  LowerAgitator.spin(directionType::rev);
+  UpperAgitator.spin(directionType::rev);
+  UpperOuttake.spin(directionType::rev);
+}
+
+void Unload()
+{
+  LowerIntake.spin(directionType::rev);
+  LowerAgitator.spin(directionType::fwd);
+  UpperAgitator.spin(directionType::fwd);
+  UpperOuttake.spin(directionType::fwd);
+}
+
+void LowGoal()
+{
+  LowerIntake.spin(directionType::fwd);
+  LowerAgitator.spin(directionType::fwd);
+  UpperAgitator.spin(directionType::fwd);
+  UpperOuttake.spin(directionType::rev);
+}
+
+void HighGoal()
+{
+  LowerIntake.spin(directionType::fwd);
+  LowerAgitator.spin(directionType::fwd);
+  UpperAgitator.spin(directionType::fwd);
+  UpperOuttake.spin(directionType::fwd);
+}
+
+void move(float dist)
+{
+  LeftMotorGroup.spinFor(dist, rotationUnits::rev, false);
+  RightMotorGroup.spinFor(dist, rotationUnits::rev, true);
+}
+
+void turn(float dist)
+{
+
+}
 
 void autonomous(void) {
-
+	RobotDrivetrain.MoveCommandInch(5.0f);
 }
 
+
+#pragma endRegion
+
+bool UpperJam = false;
+bool LowerJam = false;
+bool UpperSpin = false;
+bool LowerSpin = false;
 void usercontrol(void) {
-  // User control code here, inside the loop
+  // User control code here, inside the loop 
   while (1) {
-    float Throttle = Controller.Axis1.position();
-    float Steer = Controller.Axis2.position();
 
-    LeftMotorGroup.spin(directionType::fwd, Throttle + Steer, velocityUnits::pct);
-    RightMotorGroup.spin(directionType::fwd, Throttle - Steer, velocityUnits::pct);
+    if (Controller.ButtonUp.pressing())
+    {
+      LeftMotorGroup.setVelocity(100, percentUnits::pct);
+      RightMotorGroup.setVelocity(100, percentUnits::pct);
+      LeftMotorGroup.setMaxTorque(100, percentUnits::pct);
+      RightMotorGroup.setMaxTorque(100, percentUnits::pct);
+    } else if (Controller.ButtonDown.pressing())
+    {
+      LeftMotorGroup.setVelocity(40, percentUnits::pct);
+      RightMotorGroup.setVelocity(40, percentUnits::pct);
+      LeftMotorGroup.setMaxTorque(40, percentUnits::pct);
+      RightMotorGroup.setMaxTorque(40, percentUnits::pct);
+    }
 
+    float Throttle = Controller.Axis3.position();
+    float Steer = Controller.Axis1.position();
+
+    LeftMotorGroup.spin(directionType::fwd, Steer + Throttle, velocityUnits::pct);
+    RightMotorGroup.spin(directionType::fwd, Steer - Throttle, velocityUnits::pct);
+
+    UpperSpin = true;
+    LowerSpin = true;
+    
     if (Controller.ButtonL2.pressing())
     {
       LowerIntake.spin(directionType::fwd);
-      LowerAgitator.spin(directionType::rev);
-      UpperAgitator.spin(directionType::rev);
+      LowerAgitator.spin(directionType::rev); 
+      /*if (!UpperAgitator.isSpinning())*/ UpperAgitator.spin(directionType::rev);
       UpperOuttake.spin(directionType::rev);
     }
     else if (Controller.ButtonR2.pressing())
     {
       LowerIntake.spin(directionType::fwd);
       LowerAgitator.spin(directionType::fwd);
-      UpperAgitator.spin(directionType::fwd);
+      /*if (!UpperAgitator.isSpinning())*/ UpperAgitator.spin(directionType::fwd);
       UpperOuttake.spin(directionType::rev);
     }
     else if (Controller.ButtonR1.pressing())
     {
       LowerIntake.spin(directionType::fwd);
       LowerAgitator.spin(directionType::fwd);
-      UpperAgitator.spin(directionType::fwd);
+      /*if (!UpperAgitator.isSpinning())*/ UpperAgitator.spin(directionType::fwd);
       UpperOuttake.spin(directionType::fwd);
     }
-    else if (Controller.ButtonR2.pressing())
+    else if (Controller.ButtonL1.pressing())
     {
       LowerIntake.spin(directionType::rev);
       LowerAgitator.spin(directionType::fwd);
-      UpperAgitator.spin(directionType::fwd);
+      /*if (!UpperAgitator.isSpinning())*/ UpperAgitator.spin(directionType::fwd);
       UpperOuttake.spin(directionType::fwd);
+    }
+    else
+    {
+      UpperSpin = false;
+      LowerSpin = false;
+      LowerIntake.stop();
+      LowerAgitator.stop();
+      UpperAgitator.stop();
+      UpperOuttake.stop();
+    }
+    /*
+    if (UpperSpin && UpperAgitator.velocity(percentUnits::pct) < 10)
+    {
+      UpperJam = true;
+      if (UpperAgitator.direction() == directionType::fwd)
+      {
+        UpperAgitator.spinFor(directionType::fwd, 2, rotationUnits::rev, false);
+      }
+      else
+      {
+        UpperAgitator.spinFor(directionType::rev, 2, rotationUnits::rev, false);
+      }
+      
+    }
+    */
+
+    if (Controller.ButtonA.pressing())
+    {
+      Unloader.set(true);
+    }
+    else if (Controller.ButtonB.pressing())
+    {
+      Unloader.set(false);
     }
   }
 }
