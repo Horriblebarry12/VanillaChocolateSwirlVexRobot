@@ -1,5 +1,5 @@
 #include "Drivetrain.h"
-
+#include "cmath"
 const float wheelCircumferenceInch = 3.25 * 3.14159;
 const float gearRatio = 60.0f / 36.0f;
 const float wheelBaseInch = 12.0f;
@@ -31,7 +31,8 @@ void Drivetrain::SetMaxTorque(float torquePct)
 void Drivetrain::MoveCommandInch(float distanceInch)
 {
     float rotations = (distanceInch / wheelCircumferenceInch) * gearRatio;
-
+    X += std::cos(InertialSensor->heading()) * distanceInch;
+    Y += std::sin(InertialSensor->heading()) * distanceInch;
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {
         LeftMotors->spinFor(-rotations, rotationUnits::rev, false);
@@ -46,7 +47,7 @@ void Drivetrain::MoveCommandTile(float distanceTile)
 
 void Drivetrain::MoveCommandMM(float distanceMM)
 {
-    MoveCommandInch(distanceMM / 25.4f); // Convert mm to inches
+    MoveCommandInch(distanceMM / 25.4f);
 }
 
 void Drivetrain::TurnCommandDegPID(float angleDeg)
@@ -57,7 +58,6 @@ void Drivetrain::TurnCommandDegPID(float angleDeg)
         bool isTiming = false;
 
         pidController.reset();
-        InertialSensor->setHeading(0, rotationUnits::deg);
         float targetAngle = InertialSensor->heading() + angleDeg;
 
         float currentAngle = InertialSensor->heading();

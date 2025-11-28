@@ -11,7 +11,6 @@ class Drivetrain
 public:
     float X;
     float Y;
-    float Heading; // in degrees
     motor_group *LeftMotors;
     motor_group *RightMotors;
 
@@ -21,7 +20,7 @@ public:
 
     std::function<void(const std::string &)> Logger;
 
-    Drivetrain() : X(0), Y(0), Heading(0)
+    Drivetrain() : X(0), Y(0)
     {
         LeftMotors = nullptr;
         RightMotors = nullptr;
@@ -29,7 +28,8 @@ public:
         pidController = PID(0.1f, 0.01f, 0.05f);
     }
 
-    Drivetrain(motor_group *leftMotors, motor_group *rightMotors, inertial *inertialSensor, float kp, float ki, float kd, std::function<void(const std::string &)> logger) : X(0), Y(0), Heading(0)
+    Drivetrain(motor_group *leftMotors, motor_group *rightMotors, inertial *inertialSensor, float kp, float ki, float kd, 
+        std::function<void(const std::string &)> logger) : X(0), Y(0)
     {
         LeftMotors = leftMotors;
         RightMotors = rightMotors;
