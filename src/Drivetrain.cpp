@@ -14,6 +14,8 @@ void Drivetrain::SetMaxSpeed(float speedPct)
     {
         RightMotors->setVelocity(speedPct, percentUnits::pct);
     }
+
+    MaxSpeed = speedPct;
 }
 
 void Drivetrain::SetMaxTorque(float torquePct)
@@ -28,53 +30,60 @@ void Drivetrain::SetMaxTorque(float torquePct)
     }
 }
 
-void Drivetrain::MoveCommandInch(float distanceInch)
+void Drivetrain::MoveToPos(float x, float y)
 {
-    float rotations = (distanceInch / wheelCircumferenceInch) * gearRatio;
-    X += std::cos(InertialSensor->heading()) * distanceInch;
-    Y += std::sin(InertialSensor->heading()) * distanceInch;
-    if (LeftMotors != nullptr && RightMotors != nullptr)
-    {
-        LeftMotors->spinFor(-rotations, rotationUnits::rev, false);
-        RightMotors->spinFor(rotations, rotationUnits::rev, true);
-    }
+    float deltaX = x - X;
+    float deltaY = y - Y;
+    float distance = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+    float targetHeading = std::atan2(deltaY, deltaX) * (180.0f / 3.14159f);
+
+    MoveInchPID(distance, targetHeading);
 }
 
-void Drivetrain::MoveCommandTile(float distanceTile)
-{
-    MoveCommandInch(distanceTile * 12.0f); // Assuming 1 tile = 12 inches
-}
-
-void Drivetrain::MoveCommandMM(float distanceMM)
-{
-    MoveCommandInch(distanceMM / 25.4f);
-}
-
-void Drivetrain::TurnCommandDegPID(float angleDeg)
+void Drivetrain::MoveInchPID(float distanceInch, float headingDeg = std::numeric_limits<float>::quiet_NaN())
 {
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {
+        float rotations = (distanceInch / wheelCircumferenceInch) * gearRatio;
+
         float timer = 0;
         bool isTiming = false;
+        float targetHeading = InertialSensor->heading();
+        if (!std::isnan(headingDeg))
+        {
+            targetHeading = headingDeg;
+            TurnToDegPID(headingDeg);
+        }
 
-        pidController.reset();
-        float targetAngle = InertialSensor->heading() + angleDeg;
+        X += std::cos(InertialSensor->heading()) * distanceInch;
+        Y += std::sin(InertialSensor->heading()) * distanceInch;
 
-        float currentAngle = InertialSensor->heading();
+        pidControllerLinear.reset();
+        pidControllerRotational.reset();
+
+        float currentHeading = InertialSensor->heading();
+
+        float targetPosition = LeftMotors->position(rotationUnits::rev) + rotations;
+
+        float currentPosition = LeftMotors->position(rotationUnits::rev);
         float lastTimestamp = InertialSensor->timestamp() / 1000.0f;
         float deltaTime = 0;
 
-        while (fabs(currentAngle - targetAngle) > 0.2f && timer < 3)
+        while (fabs(currentPosition - targetPosition) > LinearTolerance && timer < Timeout)
         {
             deltaTime = (InertialSensor->timestamp() - lastTimestamp) / 1000.0f;
             if (deltaTime == 0)
                 continue;
             if (isTiming)
                 timer += deltaTime;
-            currentAngle = InertialSensor->heading();
-            TurnCommandSpeed(pidController.control(currentAngle, targetAngle, deltaTime, -100.0f, 100.0f));
+            currentPosition = LeftMotors->position(rotationUnits::rev);
+            currentHeading = InertialSensor->heading();
+            float speed = pidControllerLinear.control(currentPosition, targetPosition, deltaTime, -MaxSpeed * 0.9f, MaxSpeed * 0.9f);
+            float headingCorrection = pidControllerRotational.control(currentHeading, targetHeading, deltaTime, -MaxSpeed * 0.1f, MaxSpeed * 0.1f);
+            LeftMotors->spin(directionType::fwd, -speed + headingCorrection, velocityUnits::pct);
+            RightMotors->spin(directionType::fwd, speed + headingCorrection, velocityUnits::pct);
 
-            if (fabs(currentAngle - targetAngle) < 0.2f)
+            if (fabs(currentPosition - targetPosition) < LinearTolerance)
             {
                 if (!isTiming)
                     isTiming = true;
@@ -86,7 +95,101 @@ void Drivetrain::TurnCommandDegPID(float angleDeg)
             }
 
             lastTimestamp = InertialSensor->timestamp() / 1000.0f;
-            // wait(50, timeUnits::msec);
+        }
+        LeftMotors->stop();
+        RightMotors->stop();
+    }
+}
+
+void Drivetrain::MoveInch(float distanceInch)
+{
+    float rotations = (distanceInch / wheelCircumferenceInch) * gearRatio;
+    X += std::cos(InertialSensor->heading()) * distanceInch;
+    Y += std::sin(InertialSensor->heading()) * distanceInch;
+    if (LeftMotors != nullptr && RightMotors != nullptr)
+    {
+        LeftMotors->spinFor(-rotations, rotationUnits::rev, false);
+        RightMotors->spinFor(rotations, rotationUnits::rev, true);
+    }
+}
+
+void Drivetrain::TurnToDegPID(float angleDeg)
+{
+    if (LeftMotors != nullptr && RightMotors != nullptr)
+    {
+        float timer = 0;
+        bool isTiming = false;
+
+        pidControllerRotational.reset();
+        float targetAngle = angleDeg;
+
+        float currentAngle = InertialSensor->heading();
+        float lastTimestamp = InertialSensor->timestamp() / 1000.0f;
+        float deltaTime = 0;
+
+        while (fabs(currentAngle - targetAngle) > AngleTolerance && timer < Timeout)
+        {
+            deltaTime = (InertialSensor->timestamp() - lastTimestamp) / 1000.0f;
+            if (deltaTime == 0)
+                continue;
+            if (isTiming)
+                timer += deltaTime;
+            currentAngle = InertialSensor->heading();
+            TurnWithSpeed(pidControllerRotational.control(currentAngle, targetAngle, deltaTime, -MaxSpeed, MaxSpeed));
+
+            if (fabs(currentAngle - targetAngle) < AngleTolerance)
+            {
+                if (!isTiming)
+                    isTiming = true;
+            }
+            else
+            {
+                isTiming = false;
+                timer = 0;
+            }
+            lastTimestamp = InertialSensor->timestamp() / 1000.0f;
+        }
+
+        LeftMotors->stop();
+        RightMotors->stop();
+    }
+}
+void Drivetrain::TurnByDegPID(float angleDeg)
+{
+    if (LeftMotors != nullptr && RightMotors != nullptr)
+    {
+        float timer = 0;
+        bool isTiming = false;
+
+        pidControllerRotational.reset();
+        float targetAngle = InertialSensor->heading() + angleDeg;
+
+        float currentAngle = InertialSensor->heading();
+        float lastTimestamp = InertialSensor->timestamp() / 1000.0f;
+        float deltaTime = 0;
+
+        while (fabs(currentAngle - targetAngle) > AngleTolerance && timer < Timeout)
+        {
+            deltaTime = (InertialSensor->timestamp() - lastTimestamp) / 1000.0f;
+            if (deltaTime == 0)
+                continue;
+            if (isTiming)
+                timer += deltaTime;
+            currentAngle = InertialSensor->heading();
+            TurnWithSpeed(pidControllerRotational.control(currentAngle, targetAngle, deltaTime, -MaxSpeed, MaxSpeed));
+
+            if (fabs(currentAngle - targetAngle) < AngleTolerance)
+            {
+                if (!isTiming)
+                    isTiming = true;
+            }
+            else
+            {
+                isTiming = false;
+                timer = 0;
+            }
+
+            lastTimestamp = InertialSensor->timestamp() / 1000.0f;
         }
 
         LeftMotors->stop();
@@ -94,12 +197,7 @@ void Drivetrain::TurnCommandDegPID(float angleDeg)
     }
 }
 
-void Drivetrain::TurnCommandRadPID(float angleRad)
-{
-    TurnCommandDegPID(angleRad * (180.0f / 3.14159f));
-}
-
-void Drivetrain::TurnCommandDeg(float angleDeg)
+void Drivetrain::TurnByDeg(float angleDeg)
 {
     float turnCircumferenceInch = wheelBaseInch * 3.14159f;
     float distanceInch = (angleDeg / 360.0f) * turnCircumferenceInch;
@@ -112,12 +210,7 @@ void Drivetrain::TurnCommandDeg(float angleDeg)
     }
 }
 
-void Drivetrain::TurnCommandRad(float angleRad)
-{
-    TurnCommandDeg(angleRad * (180.0f / 3.14159f));
-}
-
-void Drivetrain::TurnCommandSpeed(float speed)
+void Drivetrain::TurnWithSpeed(float speed)
 {
     if (LeftMotors != nullptr && RightMotors != nullptr)
     {

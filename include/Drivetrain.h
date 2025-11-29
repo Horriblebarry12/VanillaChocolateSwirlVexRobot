@@ -4,6 +4,18 @@
 #include <string>
 #include "PID.h"
 
+#ifndef LinearTolerance
+#define LinearTolerance 0.05f
+#endif
+
+#ifndef AngleTolerance
+#define AngleTolerance 0.2f
+#endif
+
+#ifndef Timeout
+#define Timeout 3.0f
+#endif
+
 using namespace vex;
 
 class Drivetrain
@@ -16,7 +28,8 @@ public:
 
     inertial *InertialSensor;
 
-    PID pidController;
+    PID pidControllerLinear;
+    PID pidControllerRotational;
 
     std::function<void(const std::string &)> Logger;
 
@@ -25,16 +38,17 @@ public:
         LeftMotors = nullptr;
         RightMotors = nullptr;
 
-        pidController = PID(0.1f, 0.01f, 0.05f);
+        pidControllerRotational = PID(0.1f, 0.01f, 0.05f);
     }
 
-    Drivetrain(motor_group *leftMotors, motor_group *rightMotors, inertial *inertialSensor, float kp, float ki, float kd, 
-        std::function<void(const std::string &)> logger) : X(0), Y(0)
+    Drivetrain(motor_group *leftMotors, motor_group *rightMotors, inertial *inertialSensor, float kpLinear, float kiLinear, float kdLinear,
+               float kpRotational, float kiRotational, float kdRotational, std::function<void(const std::string &)> logger) : X(0), Y(0)
     {
         LeftMotors = leftMotors;
         RightMotors = rightMotors;
         InertialSensor = inertialSensor;
-        pidController = PID(kp, ki, kd);
+        pidControllerLinear = PID(kpLinear, kiLinear, kdLinear);
+        pidControllerRotational = PID(kpRotational, kiRotational, kdRotational);
         Logger = logger;
     }
 
@@ -42,19 +56,19 @@ public:
     void SetMaxSpeed(float speedPct);
     void SetMaxTorque(float torquePct);
 
+    void MoveToPos(float x, float y);
+
     // Negative values allowed
-    void MoveCommandInch(float distanceInch);
-    void MoveCommandTile(float distanceTile);
-    void MoveCommandMM(float distanceMM);
+    void MoveInch(float distanceInch);
+    void MoveInchPID(float distanceInch, float headingDeg = std::numeric_limits<float>::quiet_NaN());
 
     // Positive is counter clockwise
-    void TurnCommandDegPID(float angleDeg);
-    void TurnCommandRadPID(float angleRad);
+    void TurnToDegPID(float angleDeg);
+    void TurnByDegPID(float angleDeg);
+    void TurnByDeg(float angleDeg);
 
-    void TurnCommandDeg(float angleDeg);
-    void TurnCommandRad(float angleRad);
-
-    void TurnCommandSpeed(float speed);
+    void TurnWithSpeed(float speed);
 
 private:
+    float MaxSpeed = 100;
 };

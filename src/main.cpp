@@ -41,18 +41,18 @@ motor MiddleRight = motor(7, vex::gearSetting::ratio6_1, false);
 motor RearRight = motor(9, vex::gearSetting::ratio6_1, false);
 
 motor_group LeftMotorGroup = motor_group(
-		FrontLeft,
-		MiddleLeft,
-		RearLeft);
+	FrontLeft,
+	MiddleLeft,
+	RearLeft);
 
 motor_group RightMotorGroup = motor_group(
-		FrontRight,
-		MiddleRight,
-		RearRight);
+	FrontRight,
+	MiddleRight,
+	RearRight);
 
 inertial InertialSensor = inertial(10, turnType::left);
 
-Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 0.5f, -0.3f, 1.0f, Log);
+Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 0.5f, -0.3f, 1.0f, 0.1f, 0.01f, 0.05f, Log);
 
 #pragma region DriveDef
 
@@ -78,7 +78,7 @@ void autonomous(void)
 		wait(500, timeUnits::msec);
 	}
 
-	RobotDrivetrain.TurnCommandDegPID(180);
+	RobotDrivetrain.TurnToDegPID(180);
 }
 
 #pragma endRegion
