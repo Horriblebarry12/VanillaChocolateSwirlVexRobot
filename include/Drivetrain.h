@@ -5,15 +5,15 @@
 #include "PID.h"
 
 #ifndef LinearTolerance
-#define LinearTolerance 0.05f
+#define LinearTolerance 0.01f
 #endif
 
 #ifndef AngleTolerance
-#define AngleTolerance 0.2f
+#define AngleTolerance 0.3f
 #endif
 
 #ifndef Timeout
-#define Timeout 3.0f
+#define Timeout 2.0f
 #endif
 
 using namespace vex;

@@ -3,7 +3,19 @@
 #include <string>
 #include <math.h>
 #include "Drivetrain.h"
+
 using namespace vex;
+
+namespace std
+{
+	template <typename T>
+	std::string to_string(T value)
+	{
+		std::ostringstream os ;
+		os << value ;
+		return os.str() ;
+	}
+}
 
 competition Competition;
 controller Controller;
@@ -21,14 +33,14 @@ void Log(std::string msg)
 	Brain.Screen.clearLine();
 	logLine++;
 	totalLine++;
-	// if (logLine > 10)
+	if (logLine > 10)
 	{
 		Brain.Screen.setCursor(1, 0);
 		logLine = 0;
 	}
-	// else
+	else
 	{
-		//  Brain.Screen.print("-----------------------------------------------");
+		Brain.Screen.print("-----------------------------------------------");
 	}
 }
 
@@ -52,7 +64,7 @@ motor_group RightMotorGroup = motor_group(
 
 inertial InertialSensor = inertial(10, turnType::left);
 
-Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 0.5f, -0.3f, 1.0f, 0.1f, 0.01f, 0.05f, Log);
+Drivetrain RobotDrivetrain = Drivetrain(&LeftMotorGroup, &RightMotorGroup, &InertialSensor, 4.0f, -0.1f, 60.0f, 0.7f, -0.1f, 1.5f, Log);
 
 #pragma region DriveDef
 
@@ -72,20 +84,23 @@ void pre_auton()
 
 void autonomous(void)
 {
-	// for (int i = 0; i < 26; i++)
-	{
-		Log("test");
-		wait(500, timeUnits::msec);
-	}
-
-	RobotDrivetrain.TurnToDegPID(180);
+	Log("test");
+	RobotDrivetrain.SetMaxSpeed(100.0f);
+	RobotDrivetrain.MoveToPos(20.0f, 0.0f);
+	Log(std::to_string(RobotDrivetrain.X) + ", " + std::to_string(RobotDrivetrain.Y));
+	RobotDrivetrain.MoveToPos(20.0f, 20.0f);
+	Log(std::to_string(RobotDrivetrain.X) + ", " + std::to_string(RobotDrivetrain.Y));
+	RobotDrivetrain.MoveToPos(0.0f, 20.0f);
+	Log(std::to_string(RobotDrivetrain.X) + ", " + std::to_string(RobotDrivetrain.Y));
+	RobotDrivetrain.MoveToPos(0.0f, 0.0f);
+	Log(std::to_string(RobotDrivetrain.X) + ", " + std::to_string(RobotDrivetrain.Y));
+	RobotDrivetrain.TurnToDegPID(0.0f);
 }
 
-#pragma endRegion
+#pragma endregion
 
 void drivercontrol(void)
 {
-	// User control code here, inside the loop
 	while (1)
 	{
 
@@ -112,6 +127,7 @@ void drivercontrol(void)
 	}
 }
 
+
 //
 // Main will set up the competition functions and callbacks.
 //
@@ -120,13 +136,12 @@ int main()
 	// Set up callbacks for autonomous and driver control periods.
 	Competition.autonomous(autonomous);
 	Competition.drivercontrol(drivercontrol);
-
 	// Run the pre-autonomous function.
 	pre_auton();
 	autonomous();
 	// Prevent main from exiting with an infinite loop.
 	while (true)
 	{
-		wait(100, msec);
+		wait(100, timeUnits::msec);
 	}
 }

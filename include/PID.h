@@ -24,6 +24,8 @@ public:
         lastValue = 0;
     }
 
+    float control(float deltaValue, float timeStep);
+    float control(float deltaValue, float timeStep, float min, float max);
     float control(float value, float targetValue, float timeStep);
     float control(float value, float targetValue, float timeStep, float min, float max);
 
